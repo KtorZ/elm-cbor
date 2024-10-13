@@ -1,9 +1,9 @@
 module Bech32.Decode exposing (DecodeFailure(..), decode)
 
-import Bech32.Internal exposing (WordsToBytesFailure, alphabet, checksum, checksumLength, polymodStep, wordsToBytes)
+import Bech32.Internal exposing (WordsToBytesFailure, checksum, checksumLength, polymodStep, wordsToBytes)
 import Bitwise
 import Bytes exposing (Bytes)
-import Dict
+import Dict exposing (Dict)
 
 
 type DecodeFailure
@@ -11,16 +11,23 @@ type DecodeFailure
     | UnexpectedCharacterInPayload { culprit : Char }
     | UnexpectedCharacterInPrefix { culprit : Char }
     | InvalidChecksum
-    | MissingSeparator
     | TooManySeparators
     | InternalError WordsToBytesFailure
+
+
+alphabet : Dict Char Int
+alphabet =
+    Bech32.Internal.alphabet
+        |> String.toList
+        |> List.indexedMap (\i c -> ( c, i ))
+        |> Dict.fromList
 
 
 decode : String -> Result DecodeFailure { prefix : String, data : Bytes }
 decode rawInput =
     case String.split "1" (String.toLower rawInput) of
         [] ->
-            Err MissingSeparator
+            Err <| DataPayloadTooShort { minimum = checksumLength, currentLength = 0 }
 
         [ _ ] ->
             Err <| DataPayloadTooShort { minimum = checksumLength, currentLength = 0 }

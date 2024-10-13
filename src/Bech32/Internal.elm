@@ -4,7 +4,6 @@ import Bitwise exposing (and, or, shiftLeftBy, shiftRightBy)
 import Bytes exposing (Bytes)
 import Bytes.Decode as D
 import Bytes.Encode as E
-import Dict exposing (Dict)
 
 
 checksumLength : Int
@@ -12,12 +11,9 @@ checksumLength =
     6
 
 
-alphabet : Dict Char Int
+alphabet : String
 alphabet =
     "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
-        |> String.toList
-        |> List.indexedMap (\i c -> ( c, i ))
-        |> Dict.fromList
 
 
 checksum : String -> Result Char Int
