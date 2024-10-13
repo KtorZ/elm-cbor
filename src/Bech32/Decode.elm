@@ -1,31 +1,22 @@
-module Bech32.Decode exposing (Bech32Object, DecoderFailure(..), decode)
+module Bech32.Decode exposing (DecodeFailure(..), decode)
 
-import Bech32.Internal exposing (EncodingDirection(..), WordEncodingFailure, alphabet, checksum, checksumLength, encodeWords, polymodStep)
+import Bech32.Internal exposing (WordsToBytesFailure, alphabet, checksum, checksumLength, polymodStep, wordsToBytes)
 import Bitwise
 import Bytes exposing (Bytes)
-import Bytes.Encode as BE
 import Dict
 
 
-type alias Bech32Object =
-    { prefix : String
-    , words : List Int
-    , asBytes : () -> Bytes
-    }
-
-
-type DecoderFailure
+type DecodeFailure
     = DataPayloadTooShort { minimum : Int, currentLength : Int }
     | UnexpectedCharacterInPayload { culprit : Char }
     | UnexpectedCharacterInPrefix { culprit : Char }
     | InvalidChecksum
     | MissingSeparator
-    | EmptyDataPayload
     | TooManySeparators
-    | InternalError WordEncodingFailure
+    | InternalError WordsToBytesFailure
 
 
-decode : String -> Result DecoderFailure Bech32Object
+decode : String -> Result DecodeFailure { prefix : String, data : Bytes }
 decode rawInput =
     case String.split "1" (String.toLower rawInput) of
         [] ->
@@ -85,19 +76,13 @@ decode rawInput =
                             else
                                 words
                                     |> List.reverse
-                                    |> encodeWords Word5ToWord8
+                                    |> wordsToBytes
                                     |> Result.mapError InternalError
                         )
                     |> Result.map
-                        (\words ->
+                        (\data ->
                             { prefix = prefix
-                            , words = words
-                            , asBytes =
-                                \() ->
-                                    words
-                                        |> List.map BE.unsignedInt8
-                                        |> BE.sequence
-                                        |> BE.encode
+                            , data = data
                             }
                         )
 

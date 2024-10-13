@@ -2,6 +2,7 @@ module Bech32.DecodeTests exposing (suite)
 
 import Bech32.Decode as Bech32
 import Expect
+import Helpers exposing (bytesToWords8)
 import Test exposing (Test, describe, test)
 
 
@@ -18,7 +19,7 @@ suite =
                                 Ok result ->
                                     Expect.all
                                         [ \subject -> subject.prefix |> Expect.equal prefix
-                                        , \subject -> subject.words |> Expect.equal words
+                                        , \subject -> bytesToWords8 subject.data |> Expect.equal words
                                         ]
                                         result
 

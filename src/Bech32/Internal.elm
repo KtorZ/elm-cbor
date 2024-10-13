@@ -1,6 +1,9 @@
 module Bech32.Internal exposing (..)
 
 import Bitwise exposing (and, or, shiftLeftBy, shiftRightBy)
+import Bytes exposing (Bytes)
+import Bytes.Decode as D
+import Bytes.Encode as E
 import Dict exposing (Dict)
 
 
@@ -64,95 +67,135 @@ polymodStep pre =
         |> step 4 0x2A1462B3
 
 
-type EncodingDirection
-    = Word8ToWord5
-    | Word5ToWord8
+wordSize : Int
+wordSize =
+    5
 
 
-type WordEncodingFailure
+maxWord : Int
+maxWord =
+    31
+
+
+byteSize : Int
+byteSize =
+    8
+
+
+maxByte : Int
+maxByte =
+    255
+
+
+type WordsToBytesFailure
     = ExcessPadding
     | NonZeroPadding
 
 
-encodeWords : EncodingDirection -> List Int -> Result WordEncodingFailure (List Int)
-encodeWords dir wordsIn =
+wordsToBytes : List Int -> Result WordsToBytesFailure Bytes
+wordsToBytes words =
     let
-        inBits =
-            case dir of
-                Word5ToWord8 ->
-                    5
-
-                Word8ToWord5 ->
-                    8
-
-        outBits =
-            case dir of
-                Word5ToWord8 ->
-                    8
-
-                Word8ToWord5 ->
-                    5
-
-        ( finalValue, finalBits, finalWords ) =
+        ( finalValue, finalBits, finalBytes ) =
             List.foldl
-                (\word ( value0, bits0, wordsOut0 ) ->
+                (\word ( value0, bits0, bytes0 ) ->
                     let
                         value =
                             value0
-                                |> shiftLeftBy inBits
+                                |> shiftLeftBy wordSize
                                 |> or word
 
-                        ( wordsOut, bits ) =
-                            nextWords value [] (bits0 + inBits) outBits
+                        ( bytes, bits ) =
+                            nextBytes value bytes0 (bits0 + wordSize)
                     in
-                    ( value, bits, wordsOut ++ wordsOut0 )
+                    ( value, bits, bytes )
                 )
-                ( 0, 0, [] )
-                wordsIn
+                ( 0, 0, E.sequence [] )
+                words
 
         padding =
             finalValue
-                |> shiftLeftBy (outBits - finalBits)
-                |> and (maxValue outBits)
+                |> shiftLeftBy (byteSize - finalBits)
+                |> and maxByte
     in
-    case dir of
-        Word5ToWord8 ->
-            if finalBits >= inBits then
-                Err ExcessPadding
+    if finalBits >= wordSize then
+        Err ExcessPadding
 
-            else if padding /= 0 then
-                Err NonZeroPadding
-
-            else
-                List.reverse finalWords |> Ok
-
-        Word8ToWord5 ->
-            (if finalBits > 0 then
-                padding :: finalWords
-
-             else
-                finalWords
-            )
-                |> List.reverse
-                |> Ok
-
-
-maxValue : Int -> Int
-maxValue outBits =
-    shiftLeftBy outBits 1 - 1
-
-
-nextWords : Int -> List Int -> Int -> Int -> ( List Int, Int )
-nextWords value words bits0 outBits =
-    if bits0 >= outBits then
-        let
-            bits =
-                bits0 - outBits
-
-            word =
-                value |> shiftRightBy bits |> and (maxValue outBits)
-        in
-        nextWords value (word :: words) bits outBits
+    else if padding /= 0 then
+        Err NonZeroPadding
 
     else
-        ( words, bits0 )
+        Ok (E.encode finalBytes)
+
+
+bytesToWords : Bytes -> Maybe (List Int)
+bytesToWords bytes =
+    let
+        decoder =
+            D.loop
+                { value = 0, bits = 0, words = [], width = Bytes.width bytes }
+                (\st ->
+                    if st.width <= 0 then
+                        (D.succeed << D.Done << List.reverse) <|
+                            if st.bits > 0 then
+                                let
+                                    padding =
+                                        st.value |> shiftLeftBy (wordSize - st.bits) |> and maxWord
+                                in
+                                padding :: st.words
+
+                            else
+                                st.words
+
+                    else
+                        D.unsignedInt8
+                            |> D.map
+                                (\byte ->
+                                    let
+                                        value =
+                                            st.value
+                                                |> shiftLeftBy byteSize
+                                                |> or byte
+                                    in
+                                    D.Loop <|
+                                        nextWords
+                                            { st
+                                                | value = value
+                                                , width = st.width - 1
+                                                , bits = st.bits + byteSize
+                                            }
+                                )
+                )
+    in
+    D.decode decoder bytes
+
+
+nextWords : { r | value : Int, bits : Int, words : List Int, width : Int } -> { r | value : Int, bits : Int, words : List Int, width : Int }
+nextWords st =
+    if st.bits >= wordSize then
+        let
+            bits =
+                st.bits - wordSize
+
+            word =
+                st.value |> shiftRightBy bits |> and maxWord
+        in
+        nextWords { st | bits = bits, words = word :: st.words }
+
+    else
+        st
+
+
+nextBytes : Int -> E.Encoder -> Int -> ( E.Encoder, Int )
+nextBytes value encoder bits0 =
+    if bits0 >= byteSize then
+        let
+            bits =
+                bits0 - byteSize
+
+            word =
+                value |> shiftRightBy bits |> and maxByte
+        in
+        nextBytes value (E.sequence [ encoder, E.unsignedInt8 word ]) bits
+
+    else
+        ( encoder, bits0 )
