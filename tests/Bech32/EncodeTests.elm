@@ -42,5 +42,10 @@ suite =
                 "pool"
                 [ 122, 193, 158, 105, 175, 136, 116, 57, 247, 224, 251, 27, 11, 236, 48, 252, 141, 208, 43, 15, 115, 180, 209, 244, 26, 54, 207, 244 ]
                 "pool10tqeu6d03p6rnalqlvdshmpsljxaq2c0ww6draq6xm8lgyl2a3p"
+            , test "UnexpectedCharacterInPrefix" <|
+                \_ ->
+                    Bech32.encode
+                        { prefix = " 1nwldj5", data = words8ToBytes [] }
+                        |> Expect.equal (Err <| Bech32.UnexpectedCharacterInPrefix { culprit = ' ' })
             ]
         ]

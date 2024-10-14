@@ -107,7 +107,7 @@ suite =
                         [ test "5 → 8" <|
                             \_ -> wordsToBytes words5 |> Result.map bytesToWords8 |> Expect.equal (Ok words8)
                         , test "8 → 5" <|
-                            \_ -> bytesToWords (words8ToBytes words8) |> Expect.equal (Just words5)
+                            \_ -> bytesToWords (words8ToBytes words8) |> Expect.equal words5
                         ]
             in
             [ testEncodeWordsOk

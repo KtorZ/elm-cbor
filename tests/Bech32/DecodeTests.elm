@@ -46,5 +46,17 @@ suite =
                 "pool10tqeu6d03p6rnalqlvdshmpsljxaq2c0ww6draq6xm8lgyl2a3p"
                 "pool"
                 [ 122, 193, 158, 105, 175, 136, 116, 57, 247, 224, 251, 27, 11, 236, 48, 252, 141, 208, 43, 15, 115, 180, 209, 244, 26, 54, 207, 244 ]
+            , test "UnexpectedCharacterInPrefix" <|
+                \_ -> Bech32.decode " 1nwldj5" |> Expect.equal (Err <| Bech32.UnexpectedCharacterInPrefix { culprit = ' ' })
+            , test "UnexpectedCharacterInPayload" <|
+                \_ -> Bech32.decode "x1b4n0q5v" |> Expect.equal (Err <| Bech32.UnexpectedCharacterInPayload { culprit = 'b' })
+            , test "PrefixTooShort" <|
+                \_ -> Bech32.decode "1pzry9x0s0muk" |> Expect.equal (Err <| Bech32.PrefixTooShort { minimum = 1, currentLength = 0 })
+            , test "DataPayloadTooShort" <|
+                \_ -> Bech32.decode "abc1rzg" |> Expect.equal (Err <| Bech32.DataPayloadTooShort { minimum = 6, currentLength = 3 })
+            , test "MissingSeparator" <|
+                \_ -> Bech32.decode "pzry9x0s0muk" |> Expect.equal (Err <| Bech32.MissingSeparator)
+            , test "InvalidChecksum" <|
+                \_ -> Bech32.decode "m1vuxwez" |> Expect.equal (Err <| Bech32.InvalidChecksum)
             ]
         ]

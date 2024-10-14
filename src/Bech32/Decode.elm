@@ -8,10 +8,11 @@ import Dict exposing (Dict)
 
 type DecodeFailure
     = DataPayloadTooShort { minimum : Int, currentLength : Int }
+    | PrefixTooShort { minimum : Int, currentLength : Int }
     | UnexpectedCharacterInPayload { culprit : Char }
     | UnexpectedCharacterInPrefix { culprit : Char }
     | InvalidChecksum
-    | TooManySeparators
+    | MissingSeparator
     | InternalError WordsToBytesFailure
 
 
@@ -25,22 +26,20 @@ alphabet =
 
 decode : String -> Result DecodeFailure { prefix : String, data : Bytes }
 decode rawInput =
-    case String.split "1" (String.toLower rawInput) of
-        [] ->
-            Err <| DataPayloadTooShort { minimum = checksumLength, currentLength = 0 }
+    splitFromEnd "1" (String.toLower rawInput)
+        |> Result.andThen
+            (\{ prefix, payload } ->
+                if String.length prefix < 1 then
+                    Err <| PrefixTooShort { minimum = 1, currentLength = 0 }
 
-        [ _ ] ->
-            Err <| DataPayloadTooShort { minimum = checksumLength, currentLength = 0 }
+                else if String.length payload < checksumLength then
+                    Err <| DataPayloadTooShort { minimum = checksumLength, currentLength = String.length payload }
 
-        [ prefix, payload ] ->
-            let
-                payloadLen =
-                    String.length payload
-            in
-            if payloadLen < checksumLength then
-                Err <| DataPayloadTooShort { minimum = checksumLength, currentLength = payloadLen }
-
-            else
+                else
+                    Ok { prefix = prefix, payload = payload }
+            )
+        |> Result.andThen
+            (\{ prefix, payload } ->
                 checksum prefix
                     |> Result.mapError
                         (\c ->
@@ -92,6 +91,24 @@ decode rawInput =
                             , data = data
                             }
                         )
+            )
 
-        _ ->
-            Err TooManySeparators
+
+splitFromEnd : String -> String -> Result DecodeFailure { prefix : String, payload : String }
+splitFromEnd sep str =
+    let
+        last xs =
+            case xs of
+                [] ->
+                    Nothing
+
+                [ i ] ->
+                    Just i
+
+                _ :: tail ->
+                    last tail
+    in
+    String.indexes sep str
+        |> last
+        |> Maybe.map (\i -> Ok { prefix = String.left i str, payload = String.dropLeft (i + 1) str })
+        |> Maybe.withDefault (Err MissingSeparator)

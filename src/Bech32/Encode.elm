@@ -1,4 +1,4 @@
-module Bech32.Encode exposing (encode)
+module Bech32.Encode exposing (EncodeFailure(..), encode)
 
 import Array exposing (Array)
 import Bech32.Internal exposing (alphabet, bytesToWords, checksum, polymodStep)
@@ -8,7 +8,6 @@ import Bytes exposing (Bytes)
 
 type EncodeFailure
     = UnexpectedCharacterInPrefix { culprit : Char }
-    | InvalidBytes
 
 
 alphabet : Array Char
@@ -34,20 +33,15 @@ encode { prefix, data } =
             )
         |> Result.andThen
             (\chk0 ->
-                case bytesToWords data of
-                    Nothing ->
-                        Err InvalidBytes
-
-                    Just words ->
-                        Ok <|
-                            List.foldl
-                                (\word ( str, chk ) ->
-                                    ( String.append str (unsafeCharFrom word)
-                                    , Bitwise.xor (polymodStep chk) word
-                                    )
-                                )
-                                ( String.append prefix "1", chk0 )
-                                words
+                Ok <|
+                    List.foldl
+                        (\word ( str, chk ) ->
+                            ( String.append str (unsafeCharFrom word)
+                            , Bitwise.xor (polymodStep chk) word
+                            )
+                        )
+                        ( String.append prefix "1", chk0 )
+                        (bytesToWords data)
             )
         |> Result.map
             (\( str, chk ) ->

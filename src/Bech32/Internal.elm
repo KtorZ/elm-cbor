@@ -123,7 +123,7 @@ wordsToBytes words =
         Ok (E.encode finalBytes)
 
 
-bytesToWords : Bytes -> Maybe (List Int)
+bytesToWords : Bytes -> List Int
 bytesToWords bytes =
     let
         decoder =
@@ -162,7 +162,10 @@ bytesToWords bytes =
                                 )
                 )
     in
-    D.decode decoder bytes
+    -- NOTE: The 'Nothing' case is impossible here as bytes always form
+    -- a valid list of word5. So we unwrap the decoder error as an empty
+    -- list to avoid polluting the callee down the line.
+    D.decode decoder bytes |> Maybe.withDefault []
 
 
 nextWords : { r | value : Int, bits : Int, words : List Int, width : Int } -> { r | value : Int, bits : Int, words : List Int, width : Int }
