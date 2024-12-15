@@ -1,0 +1,46 @@
+name: continuous-integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.5.1
+      - uses: mpizenberg/elm-tooling-action@v1.5
+        with:
+          cache-key: elm-home-make${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          cache-restore-key: elm-home-make
+      - run: elm make
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.5.1
+      - uses: mpizenberg/elm-tooling-action@v1.5
+        with:
+          cache-key: elm-home-test${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          cache-restore-key: elm-home-test
+      - run: elm-test-rs
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.5.1
+      - uses: mpizenberg/elm-tooling-action@v1.5
+        with:
+          cache-key: elm-home-format${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          cache-restore-key: elm-home-format
+      - run: elm-format src/ tests/ --validate
+
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.5.1
+      - run: npm i elm-review
+      - run: npm exec elm-review -- --config .github/elm-review
