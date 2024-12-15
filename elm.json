@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "elm-cardano/bech32",
-    "summary": "A BIP173 compatible Bech32 encoding/decoding library.",
+    "summary": "A BIP-0173 compatible Bech32 encoding/decoding library.",
     "license": "Apache-2.0",
     "version": "1.0.0",
     "exposed-modules": [
