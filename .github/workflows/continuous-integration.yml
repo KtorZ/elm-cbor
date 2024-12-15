@@ -13,8 +13,8 @@ jobs:
       - uses: actions/checkout@v3.5.1
       - uses: mpizenberg/elm-tooling-action@v1.5
         with:
-          cache-key: elm-home-make${{ hashFiles('elm-tooling.json', 'elm.json') }}
-          cache-restore-key: elm-home-make
+          cache-key: elm-make-${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          cache-restore-key: elm-make
       - run: elm make
 
   test:
@@ -24,8 +24,8 @@ jobs:
       - uses: actions/checkout@v3.5.1
       - uses: mpizenberg/elm-tooling-action@v1.5
         with:
-          cache-key: elm-home-test${{ hashFiles('elm-tooling.json', 'elm.json') }}
-          cache-restore-key: elm-home-test
+          cache-key: elm-test-${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          cache-restore-key: elm-test
       - run: elm-test-rs
 
   format:
@@ -34,13 +34,17 @@ jobs:
       - uses: actions/checkout@v3.5.1
       - uses: mpizenberg/elm-tooling-action@v1.5
         with:
-          cache-key: elm-home-format${{ hashFiles('elm-tooling.json', 'elm.json') }}
-          cache-restore-key: elm-home-format
+          cache-key: elm-format-${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          cache-restore-key: elm-format
       - run: elm-format src/ tests/ --validate
 
   review:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.5.1
+      - uses: mpizenberg/elm-tooling-action@v1.5
+        with:
+          cache-key: elm-review-${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          cache-restore-key: elm-review
       - run: npm i elm-review
       - run: npm exec elm-review -- --config .github/elm-review
