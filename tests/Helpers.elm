@@ -8,6 +8,7 @@ import Bytes.Encode as E
 bytesToWords8 : Bytes -> List Int
 bytesToWords8 bytes =
     let
+        decoder : D.Decoder (List Int)
         decoder =
             D.loop
                 ( [], Bytes.width bytes )

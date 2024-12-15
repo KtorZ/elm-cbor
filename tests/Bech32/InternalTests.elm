@@ -1,6 +1,6 @@
 module Bech32.InternalTests exposing (suite)
 
-import Bech32.Internal exposing (WordsToBytesFailure(..), bytesToWords, checksum, polymodStep, wordsToBytes)
+import Bech32.Internal exposing (bytesToWords, checksum, polymodStep, wordsToBytes)
 import Expect
 import Helpers exposing (bytesToWords8, words8ToBytes)
 import Test exposing (Test, describe, test)
@@ -105,7 +105,7 @@ suite =
                 testEncodeWordsOk words5 words8 =
                     describe ("encodeWords\n\twords 5: " ++ Debug.toString words5 ++ "\n\twords 8: " ++ Debug.toString words8) <|
                         [ test "5 → 8" <|
-                            \_ -> wordsToBytes words5 |> Result.map bytesToWords8 |> Expect.equal (Ok words8)
+                            \_ -> wordsToBytes () () words5 |> Result.map bytesToWords8 |> Expect.equal (Ok words8)
                         , test "8 → 5" <|
                             \_ -> bytesToWords (words8ToBytes words8) |> Expect.equal words5
                         ]
@@ -123,8 +123,8 @@ suite =
                 [ 4, 11, 17, 30, 16, 17, 2, 17, 13, 13, 2, 27, 2, 28, 8, 5, 27, 28, 18, 6, 4, 20, 24, 15, 1, 29, 11, 8, 25, 11, 27, 18, 12, 26, 9, 23, 9, 17, 23, 25, 21, 19, 27, 19, 12, 10, 8 ]
                 [ 34, 227, 232, 68, 81, 107, 69, 177, 113, 5, 223, 36, 98, 83, 15, 15, 86, 140, 175, 114, 102, 147, 116, 198, 249, 172, 247, 54, 41 ]
             , test "encodeWords -> excess padding" <|
-                \_ -> wordsToBytes [ 14, 20, 15, 7, 13, 26, 0, 25, 18, 6, 11, 13, 8, 21, 4, 20, 3, 17, 2, 29, 3, 0 ] |> Expect.equal (Err ExcessPadding)
+                \_ -> wordsToBytes "excess padding" "non-zero padding" [ 14, 20, 15, 7, 13, 26, 0, 25, 18, 6, 11, 13, 8, 21, 4, 20, 3, 17, 2, 29, 3, 0 ] |> Expect.equal (Err "excess padding")
             , test "encodeWords -> non-zero padding" <|
-                \_ -> wordsToBytes [ 3, 1, 17, 17, 8, 15, 0, 20, 24, 20, 11, 6, 16, 1, 5, 29, 3, 4, 16, 3, 6, 21, 22, 26, 2, 13, 22, 9, 16, 21, 19, 24, 25, 21, 6, 18, 15, 8, 13, 24, 24, 24, 25, 9, 12, 1, 4, 16, 6, 9, 17, 1 ] |> Expect.equal (Err NonZeroPadding)
+                \_ -> wordsToBytes "excess padding" "non-zero padding" [ 3, 1, 17, 17, 8, 15, 0, 20, 24, 20, 11, 6, 16, 1, 5, 29, 3, 4, 16, 3, 6, 21, 22, 26, 2, 13, 22, 9, 16, 21, 19, 24, 25, 21, 6, 18, 15, 8, 13, 24, 24, 24, 25, 9, 12, 1, 4, 16, 6, 9, 17, 1 ] |> Expect.equal (Err "non-zero padding")
             ]
         ]

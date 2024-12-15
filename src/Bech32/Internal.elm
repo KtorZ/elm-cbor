@@ -24,6 +24,7 @@ checksum prefix =
                 Result.andThen <|
                     \chk ->
                         let
+                            i : Int
                             i =
                                 Char.toCode c
                         in
@@ -48,10 +49,11 @@ checksum prefix =
 polymodStep : Int -> Int
 polymodStep pre =
     let
+        b : Int
         b =
             pre |> shiftRightBy 25
-    in
-    let
+
+        step : Int -> Int -> Int -> Int
         step n magicNumber =
             Bitwise.xor (and -(and (shiftRightBy n b) 1) magicNumber)
     in
@@ -83,18 +85,14 @@ maxByte =
     255
 
 
-type WordsToBytesFailure
-    = ExcessPadding
-    | NonZeroPadding
-
-
-wordsToBytes : List Int -> Result WordsToBytesFailure Bytes
-wordsToBytes words =
+wordsToBytes : err -> err -> List Int -> Result err Bytes
+wordsToBytes excessPadding nonZeroPadding words =
     let
         ( finalValue, finalBits, finalBytes ) =
             List.foldl
                 (\word ( value0, bits0, bytes0 ) ->
                     let
+                        value : Int
                         value =
                             value0
                                 |> shiftLeftBy wordSize
@@ -107,46 +105,55 @@ wordsToBytes words =
                 )
                 ( 0, 0, E.sequence [] )
                 words
-
-        padding =
-            finalValue
-                |> shiftLeftBy (byteSize - finalBits)
-                |> and maxByte
     in
     if finalBits >= wordSize then
-        Err ExcessPadding
-
-    else if padding /= 0 then
-        Err NonZeroPadding
+        Err excessPadding
 
     else
-        Ok (E.encode finalBytes)
+        let
+            padding : Int
+            padding =
+                finalValue
+                    |> shiftLeftBy (byteSize - finalBits)
+                    |> and maxByte
+        in
+        if padding /= 0 then
+            Err nonZeroPadding
+
+        else
+            Ok (E.encode finalBytes)
 
 
 bytesToWords : Bytes -> List Int
 bytesToWords bytes =
     let
+        decoder : D.Decoder (List Int)
         decoder =
             D.loop
                 { value = 0, bits = 0, words = [], width = Bytes.width bytes }
                 (\st ->
                     if st.width <= 0 then
-                        (D.succeed << D.Done << List.reverse) <|
-                            if st.bits > 0 then
-                                let
-                                    padding =
-                                        st.value |> shiftLeftBy (wordSize - st.bits) |> and maxWord
-                                in
-                                padding :: st.words
+                        (if st.bits > 0 then
+                            let
+                                padding : Int
+                                padding =
+                                    st.value |> shiftLeftBy (wordSize - st.bits) |> and maxWord
+                            in
+                            padding :: st.words
 
-                            else
-                                st.words
+                         else
+                            st.words
+                        )
+                            |> List.reverse
+                            |> D.Done
+                            |> D.succeed
 
                     else
                         D.unsignedInt8
                             |> D.map
                                 (\byte ->
                                     let
+                                        value : Int
                                         value =
                                             st.value
                                                 |> shiftLeftBy byteSize
@@ -172,9 +179,11 @@ nextWords : { r | value : Int, bits : Int, words : List Int, width : Int } -> { 
 nextWords st =
     if st.bits >= wordSize then
         let
+            bits : Int
             bits =
                 st.bits - wordSize
 
+            word : Int
             word =
                 st.value |> shiftRightBy bits |> and maxWord
         in
@@ -188,9 +197,11 @@ nextBytes : Int -> E.Encoder -> Int -> ( E.Encoder, Int )
 nextBytes value encoder bits0 =
     if bits0 >= byteSize then
         let
+            bits : Int
             bits =
                 bits0 - byteSize
 
+            word : Int
             word =
                 value |> shiftRightBy bits |> and maxByte
         in

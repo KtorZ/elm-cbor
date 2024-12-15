@@ -24,6 +24,7 @@ suite =
 bech32Components : Fuzzer { prefix : String, words : List Int }
 bech32Components =
     let
+        prefixChar : Fuzzer Char
         prefixChar =
             Fuzz.intRange 33 126 |> Fuzz.map Char.fromCode
     in

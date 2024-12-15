@@ -47,5 +47,10 @@ suite =
                     Bech32.encode
                         { prefix = " 1nwldj5", data = words8ToBytes [] }
                         |> Expect.equal (Err <| Bech32.UnexpectedCharacterInPrefix { culprit = ' ' })
+            , test "PrefixTooShort" <|
+                \_ ->
+                    Bech32.encode
+                        { prefix = "", data = words8ToBytes [] }
+                        |> Expect.equal (Err <| Bech32.PrefixTooShort { minimum = 1, currentLength = 0 })
             ]
         ]
